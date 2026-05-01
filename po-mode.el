@@ -992,7 +992,7 @@ all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'."
   ; The mode name is taken from the menu string in po-subedit-mode-menu-layout.
   "PO-Edit"
   "PO subedit mode."
-  )
+  (set (make-local-variable 'indent-line-function) #'indent-relative))
 
 ;;; Window management.
 
@@ -1692,20 +1692,18 @@ generated lines in the returned string."
 
 (defun po-get-msgid ()
   "Extract and return the unquoted msgid string."
-  (let ((string (po-extract-unquoted (current-buffer)
-                                     po-start-of-msgid
-                                     (or po-start-of-msgid_plural
-                                         po-start-of-msgstr-block))))
-    string))
+  (po-extract-unquoted (current-buffer)
+                       po-start-of-msgid
+                       (or po-start-of-msgid_plural
+                           po-start-of-msgstr-block)))
 
 (defun po-get-msgid_plural ()
   "Extract and return the unquoted msgid_plural string.
 Return nil if it is not present."
   (if po-start-of-msgid_plural
-      (let ((string (po-extract-unquoted (current-buffer)
-                                         po-start-of-msgid_plural
-                                         po-start-of-msgstr-block)))
-        string)
+      (po-extract-unquoted (current-buffer)
+                           po-start-of-msgid_plural
+                           po-start-of-msgstr-block)
     nil))
 
 (defun po-get-msgstr-flavor ()
@@ -1718,10 +1716,9 @@ Returns one of \"msgstr\" or \"msgstr[i]\" for some i."
 
 (defun po-get-msgstr-form ()
   "Extract and return the unquoted msgstr string."
-  (let ((string (po-extract-unquoted (current-buffer)
-                                     po-start-of-msgstr-form
-                                     po-end-of-msgstr-form)))
-    string))
+  (po-extract-unquoted (current-buffer)
+                       po-start-of-msgstr-form
+                       po-end-of-msgstr-form))
 
 (defun po-set-msgid (msgid)
   "Replace the current msgid with MSGID.
@@ -2184,8 +2181,6 @@ Uses `po-subedit-mode', which runs `po-subedit-mode-hook'."
           (pop-to-buffer edit-buffer)
           (po-subedit-mode)
           (set (make-local-variable 'po-subedit-back-pointer) slot)
-          (set (make-local-variable 'indent-line-function)
-               #'indent-relative)
           (setq buffer-file-coding-system edit-coding)
           (erase-buffer)
           (insert string "<")
@@ -2520,8 +2515,8 @@ If the command is repeated many times in a row, cycle through contexts."
 ;;; String marking in program sources, through TAGS table.
 
 ;; Locally set in each program source buffer.
-(defvar po-find-string-function)
-(defvar po-mark-string-function)
+(defvar po-find-string-function nil)
+(defvar po-mark-string-function nil)
 
 ;; Dynamically set within po-tags-search for po-tags-loop-operate.
 (defvar po-current-po-buffer)
@@ -2697,19 +2692,11 @@ These variables are locally set in source buffer only when not already bound."
                     ((and (equal major-mode 'sh-mode)
                           (string-equal mode-line-process "[bash]"))
                      '(po-find-bash-string . po-mark-bash-string))
-                    (t '(po-find-unknown-string . po-mark-unknown-string)))))
-    (or (boundp 'po-find-string-function)
+                    (t '(ignore . error)))))
+    (or po-find-string-function
         (set (make-local-variable 'po-find-string-function) (car pair)))
-    (or (boundp 'po-mark-string-function)
+    (or po-mark-string-function
         (set (make-local-variable 'po-mark-string-function) (cdr pair)))))
-
-(defun po-find-unknown-string (_keywords)
-  "Dummy function to skip over a file, finding no string in it."
-  nil)
-
-(defun po-mark-unknown-string (_start _end _keyword)
-  "Dummy function to mark a given string.  May not be called."
-  (error (_"Dummy function called")))
 
 ;;; Awk mode specifics.
 
