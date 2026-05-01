@@ -85,7 +85,10 @@
   (unless (fboundp 'with-suppressed-warnings) ;; Emacs<27.
     (defmacro with-suppressed-warnings (_warnings &rest body)
       `(with-no-warnings ,@body)))
-  )
+
+  (unless (fboundp 'defvar-local)       ;; Emacs<24.3.
+    (defmacro defvar-local (symbol &rest args)
+      `(progn (defvar ,symbol ,@args) (make-variable-buffer-local '.symbol)))))
 
 ;;; Customisation.
 
@@ -497,9 +500,8 @@ The current buffer should be in PO mode, when this function is called."
 ;; byte compiler warnings.  It also introduces some documentation for
 ;; each of these variables, all meant to be local to PO mode buffers.
 
-;; Flag telling that MODE-LINE-STRING should be displayed.  See 'Window'
-;; page below.  Exceptionally, this variable is local to *all* buffers.
-(defvar po-mode-flag)
+(defvar-local po-mode-flag nil
+  "Flag telling that `po-mode-line-string' should be displayed.")
 
 ;; PO buffers are kept read-only to prevent random modifications.  READ-ONLY
 ;; holds the value of the read-only flag before PO mode was entered.
@@ -509,22 +511,22 @@ The current buffer should be in PO mode, when this function is called."
 ;; includes preceding whitespace and excludes following whitespace.  The
 ;; start of keyword lines are START-OF-MSGID and START-OF-MSGSTR.
 ;; ENTRY-TYPE classifies the entry.
-(defvar po-start-of-entry)
-(defvar po-start-of-msgctxt) ; = po-start-of-msgid if there is no msgctxt
-(defvar po-start-of-msgid)
-(defvar po-start-of-msgid_plural) ; = nil if there is no msgid_plural
-(defvar po-start-of-msgstr-block)
+(defvar-local po-start-of-entry)
+(defvar-local po-start-of-msgctxt) ; = po-start-of-msgid if there is no msgctxt
+(defvar-local po-start-of-msgid)
+(defvar-local po-start-of-msgid_plural) ; = nil if there is no msgid_plural
+(defvar-local po-start-of-msgstr-block)
 (defvar po-start-of-msgstr-form)
 (defvar po-end-of-msgstr-form)
-(defvar po-end-of-entry)
-(defvar po-entry-type)
+(defvar-local po-end-of-entry)
+(defvar-local po-entry-type)
 
 ;; A few counters are usefully shown in the Emacs mode line.
-(defvar po-translated-counter)
-(defvar po-fuzzy-counter)
-(defvar po-untranslated-counter)
-(defvar po-obsolete-counter)
-(defvar po-mode-line-string)
+(defvar-local po-translated-counter)
+(defvar-local po-fuzzy-counter)
+(defvar-local po-untranslated-counter)
+(defvar-local po-obsolete-counter)
+(defvar-local po-mode-line-string)
 
 ;; PO mode keeps track of fields being edited, for one given field should
 ;; have one editing buffer at most, and for exiting a PO buffer properly
@@ -936,20 +938,6 @@ all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'."
   (set (make-local-variable 'po-read-only) buffer-read-only)
   (setq buffer-read-only t)
 
-  (make-local-variable 'po-start-of-entry)
-  (make-local-variable 'po-start-of-msgctxt)
-  (make-local-variable 'po-start-of-msgid)
-  (make-local-variable 'po-start-of-msgid_plural)
-  (make-local-variable 'po-start-of-msgstr-block)
-  (make-local-variable 'po-end-of-entry)
-  (make-local-variable 'po-entry-type)
-
-  (make-local-variable 'po-translated-counter)
-  (make-local-variable 'po-fuzzy-counter)
-  (make-local-variable 'po-untranslated-counter)
-  (make-local-variable 'po-obsolete-counter)
-  (make-local-variable 'po-mode-line-string)
-
   (setq po-mode-flag t)
 
   (po-check-file-header)
@@ -998,8 +986,6 @@ all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'."
 
 ;; FIXME: Instead of this po-mode-flag business added to the mode-line
 ;; why not (setq mode-name '("PO[" po-mode-line-string "]"))?
-
-(make-variable-buffer-local 'po-mode-flag)
 
 (defvar po-mode-line-entry '(po-mode-flag ("  " po-mode-line-string))
   "Mode line format entry displaying MODE-LINE-STRING.")
