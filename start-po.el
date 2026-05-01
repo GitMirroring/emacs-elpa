@@ -1,6 +1,6 @@
-;;; start-po.el --- autoload definitions for viewing and editing PO files
+;;; start-po.el --- autoload definitions for viewing and editing PO files  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 1995-2004, 2016, 2019 Free Software Foundation, Inc.
+;; Copyright (C) 1995-2026  Free Software Foundation, Inc.
 ;;
 ;; This file is part of GNU gettext.
 ;;
@@ -35,20 +35,9 @@
 
 Special commands:
 \\{po-mode-map}
-Turning on PO mode calls the value of the variable 'po-mode-hook',
+Turning on PO mode calls the value of the variable `po-mode-hook',
 if that value is non-nil.  Behaviour may be adjusted through some variables,
-all reachable through 'M-x customize', in group 'Emacs.Editing.I18n.Po'."
+all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'."
   t)
 (setq auto-mode-alist
       (cons '("\\.po\\'\\|\\.po\\." . po-mode) auto-mode-alist))
-
-;; For viewing PO and POT files.
-
-;; To use the right coding system automatically.
-(unless (fboundp 'po-find-file-coding-system)
-  (autoload 'po-find-file-coding-system "po-compat"
-    "\
-Return a Mule (DECODING . ENCODING) pair, according to PO file charset.
-Called through file-coding-system-alist, before the file is visited for real."))
-(modify-coding-system-alist 'file "\\.po[t]?\\'\\|\\.po\\."
-                            'po-find-file-coding-system)

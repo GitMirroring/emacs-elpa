@@ -13,8 +13,13 @@
 
 # Patterns for all subdirectories: all kinds of automatic backup files.
 *.orig
-*.rej
 *~
 *.kate-swp
 .#*
 \#*#
+
+*.elc
+
+# ELPA-generated files.
+/po-mode-autoloads.el
+/po-mode-pkg.el

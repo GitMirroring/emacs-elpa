@@ -1,4 +1,4 @@
-;;; po-mode.el --- major mode for GNU gettext PO files
+;;; po-mode.el --- major mode for GNU gettext PO files  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 1995-2026 Free Software Foundation, Inc.
 ;;
@@ -24,7 +24,11 @@
 ;; Created: 1995
 ;; Package-Requires: ((emacs "23"))
 ;; Version: 2.32
-(defconst po-mode-version-string "2.32" "Version number of this version of po-mode.el.")
+(defconst po-mode-version-string
+  (or (and (fboundp 'package-get-version) ;; Emacs-27.
+           (package-get-version))
+      "2.32")
+  "Version number of this version of po-mode.el.")
 
 ;;; Commentary:
 
@@ -67,28 +71,15 @@
 ;;; Code:
 
 ;;; Emacs portability matters - part I.
-;;; Here is the minimum for customization to work.  See part II.
 
 ;; Experiment with Emacs LISP message internationalisation.
 (eval-and-compile
   (or (fboundp 'set-translation-domain)
-      (defsubst set-translation-domain (string) nil))
+      (defsubst set-translation-domain (_string) nil))
   (or (fboundp 'translate-string)
       (defsubst translate-string (string) string)))
 (defsubst _ (string) (translate-string string))
 (defsubst N_ (string) string)
-
-;; Handle missing 'customs' package.
-(eval-and-compile
-  (condition-case ()
-      (require 'custom)
-    (error nil))
-  (if (and (featurep 'custom) (fboundp 'custom-declare-variable))
-      nil
-    (defmacro defgroup (&rest args)
-      nil)
-    (defmacro defcustom (var value doc &rest args)
-      `(defvar ,var ,value ,doc))))
 
 ;;; Customisation.
 
@@ -97,46 +88,39 @@
   :group 'i18n)
 
 (defcustom po-auto-edit-with-msgid nil
-  "*Automatically use msgid when editing untranslated entries."
-  :type 'boolean
-  :group 'po)
+  "Automatically use msgid when editing untranslated entries."
+  :type 'boolean)
 
 (defcustom po-auto-fuzzy-on-edit nil
-  "*Automatically mark entries fuzzy when being edited."
-  :type 'boolean
-  :group 'po)
+  "Automatically mark entries fuzzy when being edited."
+  :type 'boolean)
 
 (defcustom po-auto-delete-previous-msgid t
-  "*Automatically delete previous msgid (marked #|) when editing entry.
+  "Automatically delete previous msgid (marked #|) when editing entry.
 Value is nil, t, or ask."
   :type '(choice (const nil)
                  (const t)
-                 (const ask))
-  :group 'po)
+                 (const ask)))
 
 (defcustom po-auto-select-on-unfuzzy nil
-  "*Automatically select some new entry while making an entry not fuzzy."
-  :type 'boolean
-  :group 'po)
+  "Automatically select some new entry while making an entry not fuzzy."
+  :type 'boolean)
 
 (defcustom po-keep-mo-file nil
-  "*Set whether MO file should be kept or discarded after validation."
-  :type 'boolean
-  :group 'po)
+  "Set whether MO file should be kept or discarded after validation."
+  :type 'boolean)
 
 (defcustom po-auto-update-file-header t
-  "*Automatically revise headers.  Value is nil, t, or ask."
+  "Automatically revise headers.  Value is nil, t, or ask."
   :type '(choice (const nil)
                  (const t)
-                 (const ask))
-  :group 'po)
+                 (const ask)))
 
 (defcustom po-auto-replace-revision-date t
-  "*Automatically revise date in headers.  Value is nil, t, or ask."
+  "Automatically revise date in headers.  Value is nil, t, or ask."
   :type '(choice (const nil)
                  (const t)
-                 (const ask))
-  :group 'po)
+                 (const ask)))
 
 (defcustom po-default-file-header "\
 # SOME DESCRIPTIVE TITLE.
@@ -154,39 +138,34 @@ msgstr \"\"
 \"Content-Type: text/plain; charset=CHARSET\\n\"
 \"Content-Transfer-Encoding: 8bit\\n\"
 "
-  "*Default PO file header."
-  :type 'string
-  :group 'po)
+  "Default PO file header."
+  :type 'string)
 
 (defcustom po-translation-project-address
   "robot@translationproject.org"
-  "*Electronic mail address of the Translation Project.
+  "Electronic mail address of the Translation Project.
 Typing \\[po-send-mail] (normally bound to `M') the user will send the PO file
 to this email address."
-  :type 'string
-  :group 'po)
+  :type 'string)
 
 (defcustom po-translation-project-mail-label "TP-Robot"
-  "*Subject label when sending the PO file to `po-translation-project-address'."
-  :type 'string
-  :group 'po)
+  "Subject label when sending the PO file to `po-translation-project-address'."
+  :type 'string)
 
 (defcustom po-highlighting t
-  "*Highlight text whenever appropriate, when non-nil.
+  "Highlight text whenever appropriate, when non-nil.
 However, on older Emacses, a yet unexplained highlighting bug causes files
 to get mangled."
-  :type 'boolean
-  :group 'po)
+  :type 'boolean)
 
 (defcustom po-highlight-face 'highlight
-  "*The face used for PO mode highlighting.  For Emacses with overlays.
-Possible values are 'highlight', 'modeline', 'secondary-selection',
-'region', and 'underline'.
+  "The face used for PO mode highlighting.  For Emacses with overlays.
+Possible values are `highlight', `modeline', `secondary-selection',
+`region', and `underline'.
 This variable can be set by the user to whatever face they desire.
 It's most convenient if the cursor color and highlight color are
 slightly different."
-  :type 'face
-  :group 'po)
+  :type 'face)
 
 (defcustom po-team-name-to-code
   ;; All possible languages, a complete ISO 639 list, the inverse of
@@ -465,36 +444,30 @@ slightly different."
     ("Zhuang" . "za")
     ("Zulu" . "zu")
     )
-  "*Association list giving team codes from team names.
-This is used for generating a submission file name for the 'M' command.
+  "Association list giving team codes from team names.
+This is used for generating a submission file name for the `po-send-mail'
+command.
 If a string instead of an alist, it is a team code to use unconditionally."
-  :type 'sexp
-  :group 'po)
+  :type 'sexp)
 
 (defcustom po-gzip-uuencode-command "gzip -9 | uuencode -m"
-  "*The filter to use for preparing a mail invoice of the PO file.
+  ;; FIXME: Use MIME!
+  "The filter to use for preparing a mail invoice of the PO file.
 Normally \"gzip -9 | uuencode -m\", remove the -9 for lesser compression,
-or remove the -m if you are not using the GNU version of 'uuencode'."
-  :type 'string
-  :group 'po)
-
-(defcustom po-subedit-mode-hook nil
-  "Hook run when entering PO subedit mode."
-  :type 'hook
-  :group 'po)
-
+or remove the -m if you are not using the GNU version of `uuencode'."
+  :type 'string)
 
 ;;; Emacs portability matters - part II.
 
-;;; Many portability matters are addressed in this page.  The few remaining
-;;; cases, elsewhere, all involve  'eval-and-compile', 'boundp' or 'fboundp'.
+;; Many portability matters are addressed in this page.  The few remaining
+;; cases, elsewhere, all involve  'eval-and-compile', 'boundp' or 'fboundp'.
 
 ;; Handle portable highlighting.  Code has been adapted (OK... stolen! :-)
 ;; from 'ispell.el'.
 
 (defun po-create-overlay ()
   "Create and return a deleted overlay structure.
-The variable 'po-highlight-face' selects the face to use for highlighting."
+The variable `po-highlight-face' selects the face to use for highlighting."
   (let ((overlay (make-overlay (point) (point))))
     (overlay-put overlay 'face po-highlight-face)
     ;; The fun thing is that a deleted overlay retains its face, and is
@@ -582,7 +555,7 @@ The current buffer should be in PO mode, when this function is called."
 ;; strings, kept in a format suitable for reading with completion.
 ;; STRING-CONTENTS holds the value of the most recent string found in sources,
 ;; and when it is not nil, then STRING-BUFFER, STRING-START and STRING-END
-;; describe where it is.  MARKING-OVERLAY, if not 'nil', holds the overlay
+;; describe where it is.  MARKING-OVERLAY, if not `nil', holds the overlay
 ;; which highlight the last found string; for older Emacses, it holds the cons
 ;; of two markers around the highlighted region.
 (defvar po-keywords)
@@ -780,7 +753,7 @@ M-S  Ignore path          M-A  Ignore PO file      *M-L  Ignore lexicon
   "List of auxiliary PO files, in completing read format.")
 
 (defvar po-auxiliary-cursor nil
-  "Cursor into the 'po-auxiliary-list'.")
+  "Cursor into the `po-auxiliary-list'.")
 
 (defvar po-compose-mail-function
   (let ((functions '(compose-mail-other-window
@@ -799,7 +772,7 @@ M-S  Ignore path          M-A  Ignore PO file      *M-L  Ignore lexicon
           ((fboundp 'mail)
            (function (lambda (to subject)
                        (mail nil to subject))))
-          (t (function (lambda (to subject)
+          (t (function (lambda (to _subject)
                          (error (_"I do not know how to mail to '%s'") to))))))
   "Function to start composing an electronic message.")
 
@@ -950,9 +923,9 @@ M-S  Ignore path          M-A  Ignore PO file      *M-L  Ignore lexicon
 
 Special commands:
 \\{po-mode-map}
-Turning on PO mode calls the value of the variable 'po-mode-hook',
+Turning on PO mode calls the value of the variable `po-mode-hook',
 if that value is non-nil.  Behaviour may be adjusted through some variables,
-all reachable through 'M-x customize', in group 'Emacs.Editing.I18n.Po'."
+all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'."
   (interactive)
   (kill-all-local-variables)
   (setq major-mode 'po-mode
@@ -1219,10 +1192,10 @@ Can be customized with the `po-auto-update-file-header' variable."
 
 (defun po-find-span-of-entry ()
   "Find the extent of the PO file entry where the cursor is.
-Set variables po-start-of-entry, po-start-of-msgctxt, po-start-of-msgid,
-po-start-of-msgid_plural, po-start-of-msgstr-block, po-end-of-entry, and
-po-entry-type to meaningful values. po-entry-type may be set to: obsolete,
-fuzzy, untranslated, or translated."
+Set variables `po-start-of-entry', `po-start-of-msgctxt', `po-start-of-msgid',
+`po-start-of-msgid_plural', `po-start-of-msgstr-block', `po-end-of-entry', and
+`po-entry-type' to meaningful values. `po-entry-type' may be set to: `obsolete',
+`fuzzy', `untranslated', or `translated'."
   (let ((here (point)))
     (if (re-search-backward po-any-msgstr-block-regexp nil t)
         (progn
@@ -1755,7 +1728,7 @@ Evaluating FORM should insert the wanted string in the current buffer.  If
 FORM is itself a string, then this string is used for insertion.  The string
 is properly requoted before the replacement occurs.
 
-Returns 'nil' if the buffer has not been modified, for if the new msgid
+Returns `nil' if the buffer has not been modified, for if the new msgid
 described by FORM is merely identical to the msgid already in place."
   (let ((string (po-eval-requoted form "msgid" (eq po-entry-type 'obsolete))))
     (save-excursion
@@ -1774,7 +1747,7 @@ Evaluating FORM should insert the wanted string in the current buffer.  If
 FORM is itself a string, then this string is used for insertion.  The string
 is properly requoted before the replacement occurs.
 
-Returns 'nil' if the buffer has not been modified, for if the new msgstr
+Returns `nil' if the buffer has not been modified, for if the new msgstr
 described by FORM is merely identical to the msgstr already in place."
   (let ((string (po-eval-requoted form
                                   (po-get-msgstr-flavor)
@@ -1890,7 +1863,7 @@ If KILL-FLAG, then add the unquoted comment to the kill ring."
 Evaluating FORM should insert the wanted string in the current buffer.
 If FORM is itself a string, then this string is used for insertion.
 The string is properly recommented before the replacement occurs."
-  (let ((obsolete (eq po-entry-type 'obsolete))
+  (let (;; (obsolete (eq po-entry-type 'obsolete))
         string)
     (with-temp-buffer
       (if (stringp form)
@@ -2047,12 +2020,18 @@ comments) from the current entry, if the user gives the permission."
 (defun po-ediff-quit ()
   "Quit ediff and exit `recursive-edit'."
   (interactive)
+  ;; Presumably, by the time we get here, Ediff will have been loaded.
+  (declare-function ediff-quit "ediff-util" (reverse-default-keep-variants))
   (ediff-quit t)
   (exit-recursive-edit))
 
+;; FIXME: This should not be installed globally and should not modify
+;; the `ediff-mode-map' globally.
+;; Its scope should be limited (presumably) to `po-subedit-ediff'.
 (add-hook 'ediff-keymap-setup-hook
-          '(lambda ()
-             (define-key ediff-mode-map "Q" 'po-ediff-quit)))
+          (lambda ()
+            (defvar ediff-mode-map)
+            (define-key ediff-mode-map "Q" #'po-ediff-quit)))
 
 ;; Avoid byte compiler warnings.
 (defvar entry-buffer)
@@ -2177,8 +2156,8 @@ When done with the `ediff' session press \\[exit-recursive-edit] exit to
 
 (defun po-edit-string (string type expand-tabs)
   "Prepare a pop up buffer for editing STRING, which is of a given TYPE.
-TYPE may be 'comment or 'msgstr.  If EXPAND-TABS, expand tabs to spaces.
-Run functions on po-subedit-mode-hook."
+TYPE may be `comment' or `msgstr'.  If EXPAND-TABS, expand tabs to spaces.
+Uses `po-subedit-mode', which runs `po-subedit-mode-hook'."
   (let ((marker (make-marker)))
     (set-marker marker (cond ((eq type 'comment) po-start-of-msgid)
                              ((eq type 'msgstr) po-start-of-msgstr-form)))
@@ -2339,11 +2318,11 @@ To minibuffer messages sent while normalizing, add the EXPLAIN string."
   (po-show-auxiliary-list))
 
 (defun po-seek-equivalent-translation (name string)
-  "Search a PO file NAME for a 'msgid' STRING having a non-empty 'msgstr'.
-STRING is the full quoted msgid field, including the 'msgid' keyword.  When
-found, display the file over the current window, with the 'msgstr' field
-possibly highlighted, the cursor at start of msgid, then return 't'.
-Otherwise, move nothing, and just return 'nil'."
+  "Search a PO file NAME for a `msgid' STRING having a non-empty `msgstr'.
+STRING is the full quoted msgid field, including the `msgid' keyword.  When
+found, display the file over the current window, with the `msgstr' field
+possibly highlighted, the cursor at start of msgid, then return `t'.
+Otherwise, move nothing, and just return `nil'."
   (let ((current (current-buffer))
         (buffer (find-file-noselect name)))
     (set-buffer buffer)
@@ -2380,7 +2359,7 @@ Otherwise, move nothing, and just return 'nil'."
       found)))
 
 (defun po-cycle-auxiliary ()
-  "Select the next auxiliary file having an entry with same 'msgid'."
+  "Select the next auxiliary file having an entry with same `msgid'."
   (interactive)
   (po-find-span-of-entry)
   (if po-auxiliary-list
@@ -2418,7 +2397,7 @@ Otherwise, move nothing, and just return 'nil'."
 
 (defun po-select-auxiliary ()
   "Select one of the available auxiliary files and locate an equivalent entry.
-If an entry having the same 'msgid' cannot be found, merely select the file
+If an entry having the same `msgid' cannot be found, merely select the file
 without moving its cursor."
   (interactive)
   (po-find-span-of-entry)
@@ -2566,6 +2545,7 @@ With prefix argument, restart search at first file."
   (let ((po-current-po-buffer (current-buffer))
         (po-current-po-keywords po-keywords))
     (pop-to-buffer po-string-buffer)
+    ;; FIXME: Use `fileloop-initialize' when available.
     (if (and (not restart)
              (eq (car tags-loop-operate) 'po-tags-loop-operate))
         ;; Continue last po-tags-search.
@@ -2633,8 +2613,7 @@ Disregard some simple strings which are most probably non-translatable."
     (if data
         ;; Save information for marking functions.
         (let ((buffer (current-buffer)))
-          (save-excursion
-            (set-buffer po-current-po-buffer)
+          (with-current-buffer po-current-po-buffer
             (setq po-string-contents (nth 0 data)
                   po-string-buffer buffer
                   po-string-start (nth 1 data)
@@ -2652,10 +2631,9 @@ Disregard some simple strings which are most probably non-translatable."
         (buffer po-string-buffer)
         (start po-string-start)
         (end po-string-end)
-        line string)
+        line) ;; string
     ;; Mark string in program sources.
-    (save-excursion
-      (set-buffer buffer)
+    (with-current-buffer buffer
       (setq line (count-lines (point-min) start))
       (apply po-mark-string-function start end keyword nil))
     ;; Add PO file entry.
@@ -2713,11 +2691,11 @@ These variables are locally set in source buffer only when not already bound."
     (or (boundp 'po-mark-string-function)
         (set (make-local-variable 'po-mark-string-function) (cdr pair)))))
 
-(defun po-find-unknown-string (keywords)
+(defun po-find-unknown-string (_keywords)
   "Dummy function to skip over a file, finding no string in it."
   nil)
 
-(defun po-mark-unknown-string (start end keyword)
+(defun po-mark-unknown-string (_start _end _keyword)
   "Dummy function to mark a given string.  May not be called."
   (error (_"Dummy function called")))
 
@@ -2783,7 +2761,7 @@ Leave point after marked string."
 
 ;;; Bash mode specifics.
 
-(defun po-find-bash-string (keywords)
+(defun po-find-bash-string (_keywords)
   "Find the next unmarked Bash string.  KEYWORDS are merely ignored.
 Return (CONTENTS START END) for the found string, or nil if none found."
   (let (start end)
@@ -2816,7 +2794,7 @@ Return (CONTENTS START END) for the found string, or nil if none found."
     (and start end
          (list (po-extract-unquoted (current-buffer) start end) start end))))
 
-(defun po-mark-bash-string (start end keyword)
+(defun po-mark-bash-string (start end _keyword)
   "Mark the Bash string, from START to END, with '$'.  KEYWORD is ignored.
 Leave point after marked string."
   (goto-char start)
@@ -3116,24 +3094,19 @@ Leave point after marked string."
   (po-compute-counters t))
 
 (defun po-validate ()
-  "Use 'msgfmt' for validating the current PO file contents."
+  "Use `msgfmt' for validating the current PO file contents."
   (interactive)
   ;; The 'compile' subsystem is autoloaded through a call to (compile ...).
   ;; We need to initialize it outside of any binding. Without this statement,
   ;; all defcustoms and defvars of compile.el would be undone when the let*
   ;; terminates.
   (require 'compile)
-  (let* ((dev-null
-          (cond ((boundp 'null-device) null-device) ; since Emacs 20.3
-                ((memq system-type '(windows-nt windows-95)) "NUL")
-                (t "/dev/null")))
-         (output
+  (let* ((output
           (if po-keep-mo-file
               (concat (file-name-sans-extension buffer-file-name) ".mo")
-            dev-null))
+            null-device))
          (compilation-buffer-name-function
-          (function (lambda (mode-name)
-                      (concat "*" mode-name " validation*"))))
+          (lambda (name) (concat "*" name " validation*")))
          (compile-command (concat po-msgfmt-program
                                   " --statistics -c -v -o "
                                   (shell-quote-argument output) " "
@@ -3143,7 +3116,7 @@ Leave point after marked string."
 
 (defvar po-msgfmt-version-checked nil)
 (defun po-msgfmt-version-check ()
-  "'msgfmt' from GNU gettext 0.10.36 or greater is required."
+  "`msgfmt' from GNU gettext 0.10.36 or greater is required."
   (with-temp-buffer
     (or
      ;; Don't bother checking again.
@@ -3203,7 +3176,8 @@ Leave point after marked string."
              (string-match "^[^\\.]*\\.po\\'" filename))
             (;; TP Robot compatible `filename': PACKAGE-VERSION.LL.po
              (string-match (concat (regexp-quote package)
-                                   "-\\(.*\\)\\.[^\\.]*\\.po\\'") filename)
+                            "-\\(.*\\)\\.[^\\.]*\\.po\\'")
+                           filename)
              (if (not (equal version (match-string-no-properties 1 filename)))
                  (error (_"\
 Version mismatch: file name: %s; header: %s.\n\
@@ -3346,7 +3320,6 @@ strings remain."
               (kill-buffer (current-buffer)))))))
 
 ;;;###autoload (add-to-list 'auto-mode-alist '("\\.po[tx]?\\'\\|\\.po\\." . po-mode))
-;;;###autoload (modify-coding-system-alist 'file "\\.po[tx]?\\'\\|\\.po\\." 'po-find-file-coding-system)
 
 (provide 'po-mode)
 
