@@ -1030,13 +1030,13 @@ all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'."
 (defun po-decrease-type-counter ()
   "Decrease the counter corresponding to the nature of the current entry."
   (let ((counter (po-type-counter)))
-    (set counter (1- (eval counter)))))
+    (set counter (1- (symbol-value counter)))))
 
 (defun po-increase-type-counter ()
   "Increase the counter corresponding to the nature of the current entry.
 Then, update the mode line counters."
   (let ((counter (po-type-counter)))
-    (set counter (1+ (eval counter))))
+    (set counter (1+ (symbol-value counter))))
   (po-update-mode-line-string))
 
 ;; Avoid byte compiler warnings.
@@ -1471,7 +1471,7 @@ If WRAP is not nil, the search may wrap around the buffer."
                  (message "")))
       ;; In an entry with plural forms, use the msgid_plural string,
       ;; as it is more general than the msgid string.
-      (if (po-set-msgstr-form (or (po-get-msgid_plural) (po-get-msgid)))
+      (if (po-set-msgstr (or (po-get-msgid_plural) (po-get-msgid)))
           (po-maybe-delete-previous-untranslated))))
 
 ;; Obsolete entries.
@@ -1644,17 +1644,16 @@ Surrounding quotes are already excluded by the position of START and END."
                 (insert value)))))
    (buffer-string)))
 
-(defun po-eval-requoted (form prefix obsolete)
-  "Eval FORM, which inserts a string, and return the string fully requoted.
+(defun po-eval-requoted (string-or-func prefix obsolete)
+ "Return STRING-OR-FUNC fully requoted.
+STRING-OR-FUNC should be either a string or a function which will be called
+with no arguments and should insert something at point.
 If PREFIX, precede the result with its contents.  If OBSOLETE, comment all
-generated lines in the returned string.  Evaluating FORM should insert the
-wanted string in the buffer which is current at the time of evaluation.
-If FORM is itself a string, then this string is used for insertion."
+generated lines in the returned string."
   (with-temp-buffer
-    (if (stringp form)
-        (insert form)
-      (push-mark)
-      (eval form))
+    (if (stringp string-or-func)
+        (insert string-or-func)
+      (funcall string-or-func))
     (goto-char (point-min))
     (let ((multi-line (re-search-forward "[^\n]\n+[^\n]" nil t)))
       (goto-char (point-min))
@@ -1718,15 +1717,14 @@ Returns one of \"msgstr\" or \"msgstr[i]\" for some i."
                                      po-end-of-msgstr-form)))
     string))
 
-(defun po-set-msgid (form)
-  "Replace the current msgid, using FORM to get a string.
-Evaluating FORM should insert the wanted string in the current buffer.  If
-FORM is itself a string, then this string is used for insertion.  The string
-is properly requoted before the replacement occurs.
+(defun po-set-msgid (msgid)
+  "Replace the current msgid with MSGID.
+MSGID should be a string.
+It is properly requoted before the replacement occurs.
 
 Returns `nil' if the buffer has not been modified, for if the new msgid
 described by FORM is merely identical to the msgid already in place."
-  (let ((string (po-eval-requoted form "msgid" (eq po-entry-type 'obsolete))))
+  (let ((string (po-eval-requoted msgid "msgid" (eq po-entry-type 'obsolete))))
     (save-excursion
       (goto-char po-start-of-entry)
       (re-search-forward po-any-msgid-regexp po-start-of-msgstr-block)
@@ -1737,15 +1735,14 @@ described by FORM is merely identical to the msgid already in place."
              (po-find-span-of-entry)
              t)))))
 
-(defun po-set-msgstr-form (form)
-  "Replace the current msgstr or msgstr[], using FORM to get a string.
-Evaluating FORM should insert the wanted string in the current buffer.  If
-FORM is itself a string, then this string is used for insertion.  The string
-is properly requoted before the replacement occurs.
+(defun po-set-msgstr (msgstr-or-func)
+  "Replace the current msgstr or msgstr[], using MSGSTR-OR-FUNC to get a string.
+MSGSTR-OR-FUNC should be a string or a function that inserts a string at point.
+The string is properly requoted before the replacement occurs.
 
 Returns `nil' if the buffer has not been modified, for if the new msgstr
 described by FORM is merely identical to the msgstr already in place."
-  (let ((string (po-eval-requoted form
+  (let ((string (po-eval-requoted msgstr-or-func
                                   (po-get-msgstr-flavor)
                                   (eq po-entry-type 'obsolete))))
     (save-excursion
@@ -1772,14 +1769,15 @@ described by FORM is merely identical to the msgstr already in place."
   "Empty the msgstr string from current entry, pushing it on the kill ring."
   (interactive)
   (po-kill-ring-save-msgstr)
-  (if (po-set-msgstr-form "")
+  (if (po-set-msgstr "")
       (po-maybe-delete-previous-untranslated)))
 
 (defun po-yank-msgstr ()
   "Replace the current msgstr string by the top of the kill ring."
   (interactive)
   (po-find-span-of-entry)
-  (if (po-set-msgstr-form (if (eq last-command 'yank) '(yank-pop 1) '(yank)))
+  (if (po-set-msgstr (if (not (eq last-command 'yank)) #'yank
+                       (lambda () (push-mark) (yank-pop 1))))
       (po-maybe-delete-previous-untranslated))
   (setq this-command 'yank))
 
@@ -1854,18 +1852,17 @@ If KILL-FLAG, then add the unquoted comment to the kill ring."
             (buffer-string))
         ""))))
 
-(defun po-set-comment (form)
-  "Using FORM to get a string, replace the current editable comment.
-Evaluating FORM should insert the wanted string in the current buffer.
-If FORM is itself a string, then this string is used for insertion.
+(defun po-set-comment (string-or-func)
+ "Replace the current editable comment with STRING-OR-FUNC.
+STRING-OR-FUNC should be either a string or a function that we call
+with no arguments and should insert a string at point.
 The string is properly recommented before the replacement occurs."
   (let (;; (obsolete (eq po-entry-type 'obsolete))
         string)
     (with-temp-buffer
-      (if (stringp form)
-          (insert form)
-        (push-mark)
-        (eval form))
+      (if (stringp string-or-func)
+          (insert string-or-func)
+        (funcall string-or-func))
       (if (not (or (bobp) (= (preceding-char) ?\n)))
           (insert "\n"))
       (goto-char (point-min))
@@ -1900,7 +1897,8 @@ The string is properly recommented before the replacement occurs."
   "Replace the current comment string by the top of the kill ring."
   (interactive)
   (po-find-span-of-entry)
-  (po-set-comment (if (eq last-command 'yank) '(yank-pop 1) '(yank)))
+  (po-set-comment (if (not (eq last-command 'yank)) #'yank
+                    (lambda () (push-mark) (yank-pop 1))))
   (setq this-command 'yank)
   (po-redisplay))
 
@@ -2138,7 +2136,7 @@ When done with the `ediff' session press \\[exit-recursive-edit] exit to
            (po-set-comment string)
            (po-redisplay))
           ((= (point) po-start-of-msgstr-form)
-           (if (po-set-msgstr-form string)
+           (if (po-set-msgstr string)
                (progn
                  (po-maybe-delete-previous-untranslated)
                  (if (and po-auto-fuzzy-on-edit
@@ -2254,7 +2252,7 @@ To minibuffer messages sent while normalizing, add the EXPLAIN string."
       (goto-char (match-beginning 0))
       (po-find-span-of-entry)
       (cond ((eq field 'msgid) (po-set-msgid (po-get-msgid)))
-            ((eq field 'msgstr) (po-set-msgstr-form (po-get-msgstr-form))))
+            ((eq field 'msgstr) (po-set-msgstr (po-get-msgstr-form))))
       (goto-char po-end-of-entry)
       (setq counter (1+ counter)))
     (goto-char here)
