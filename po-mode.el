@@ -830,7 +830,7 @@ M-S  Ignore path          M-A  Ignore PO file      *M-L  Ignore lexicon
     ("^#,\\(.*\\)" (1 'font-lock-function-name-face))
     ("^\\(\\(msg\\(ctxt\\|id\\(_plural\\)?\\|str\\(\\[[0-9]\\]\\)?\\)\\) \\)?\"\\|\"$"
      (0 'font-lock-keyword-face))
-    ("\\\\.\\|%[*$-.0-9hjltuzL]*[a-zA-Z]" (0 'font-lock-variable-name-face))
+    ("\\\\.\\|%[*$-.0-9hjltuzL]*[[:alpha:]]" (0 'font-lock-variable-name-face))
     )
   "Additional expressions to highlight in PO mode.")
 
@@ -2601,15 +2601,15 @@ Disregard some simple strings which are most probably non-translatable."
            (insert (nth 0 data))
            (goto-char (point-min))
            ;; Accept if at least three letters in a row.
-           (if (re-search-forward "[A-Za-z][A-Za-z][A-Za-z]" nil t)
+           (if (re-search-forward "[[:alpha:]][[:alpha:]][[:alpha:]]" nil t)
                (setq continue nil)
              ;; Disregard if single letters or no letters at all.
-             (if (re-search-forward "[A-Za-z][A-Za-z]" nil t)
+             (if (re-search-forward "[[:alpha:]][[:alpha:]]" nil t)
                  ;; Here, we have two letters in a row, but never more.
                  ;; Accept only if more letters than punctuations.
                  (let ((total (buffer-size)))
                    (goto-char (point-min))
-                   (while (re-search-forward "[A-Za-z]+" nil t)
+                   (while (re-search-forward "[[:alpha:]]+" nil t)
                      (replace-match "" t t))
                    (if (< (* 2 (buffer-size)) total)
                        (setq continue nil))))))
@@ -2734,7 +2734,7 @@ Return (CONTENTS START END) for the found string, or nil if none found."
                        ((= (preceding-char) ?\()
                         (backward-char 1)
                         (let ((end-keyword (point)))
-                          (skip-chars-backward "_A-Za-z0-9")
+                          (skip-chars-backward "_[:alnum:]")
                           (if (member (list (buffer-substring-no-properties
                                              (point) end-keyword))
                                       keywords)
@@ -2860,7 +2860,7 @@ Returns (CONTENTS START END) for the found string, or nil if none found."
                      (backward-char 1)
                      (skip-chars-backward " \n\t")
                      (let ((end-keyword (point)))
-                       (skip-chars-backward "_A-Za-z0-9")
+                       (skip-chars-backward "_[:alnum:]")
                        (if (member (list (buffer-substring-no-properties (point)
                                                                          end-keyword))
                                    keywords)
@@ -2913,7 +2913,7 @@ Returns (CONTENTS START END) for the found string, or nil if none found."
                (goto-char start)
                (skip-chars-backward " \n\t")
                (let ((end-keyword (point)))
-                 (skip-chars-backward "-_A-Za-z0-9")
+                 (skip-chars-backward "-_[:alnum:]")
                  (if (and (= (preceding-char) ?\()
                           (member (list (buffer-substring-no-properties (point)
                                                                         end-keyword))
@@ -2973,7 +2973,7 @@ Returns (CONTENTS START END) for the found string, or nil if none found."
                     (backward-char 1)
                     (skip-chars-backward " \n\t")
                     (let ((end-keyword (point)))
-                      (skip-chars-backward "_A-Za-z0-9")
+                      (skip-chars-backward "_[:alnum:]")
                       (if (member (list (buffer-substring-no-properties (point)
                                                                         end-keyword))
                                   keywords)
@@ -3134,8 +3134,8 @@ Leave point after marked string."
              (or (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)$")
                  (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)$")
                  (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)$")
-                 (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)[-_A-Za-z0-9]+$")
-                 (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)[-_A-Za-z0-9]+$")))
+                 (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)[-_[:alnum:]]+$")
+                 (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)[-_[:alnum:]]+$")))
 
       ;; Make sure the version is recent enough.
       (>= (string-to-number
