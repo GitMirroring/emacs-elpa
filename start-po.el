@@ -26,18 +26,22 @@
 ;; dumped Emacs image, or loaded automatically when Emacs is started,
 ;; regardless how the user's .emacs looks like.
 
+;; Copied from the `po-mode-autoloads.el' auto-generated for the ELPA package.
+;; Not useful when installing the file via a package manager.
+
 ;;; Code:
 
 ;; For editing PO files.
 
-(autoload 'po-mode "po-mode"
-  "Major mode for translators when they edit PO files.
+(autoload 'po-mode "po-mode" "\
+Major mode for translators when they edit PO files.
 
-Special commands:
-\\{po-mode-map}
-Turning on PO mode calls the value of the variable `po-mode-hook',
-if that value is non-nil.  Behaviour may be adjusted through some variables,
-all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'."
-  t)
-(setq auto-mode-alist
-      (cons '("\\.po\\'\\|\\.po\\." . po-mode) auto-mode-alist))
+Behaviour may be adjusted through some variables,
+all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'.
+
+This mode runs the hook `po-mode-hook', as the final or penultimate
+step during initialization.
+
+\\{po-mode-map}" t)
+
+(add-to-list 'auto-mode-alist '("\\.po[tx]?\\'\\|\\.po\\." . po-mode))

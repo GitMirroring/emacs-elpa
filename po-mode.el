@@ -819,12 +819,12 @@ M-S  Ignore path          M-A  Ignore PO file      *M-L  Ignore lexicon
 ;; Font lock based highlighting code.
 (defconst po-font-lock-keywords
   '(
-    ("^# .*\\|^#[:,]?" . font-lock-comment-face)
-    ("^#:\\(.*\\)" 1 font-lock-constant-face)
-    ("^#,\\(.*\\)" 1 font-lock-function-name-face)
+    ("^# .*\\|^#[:,]?" (0 'font-lock-comment-face))
+    ("^#:\\(.*\\)" (1 'font-lock-constant-face))
+    ("^#,\\(.*\\)" (1 'font-lock-function-name-face))
     ("^\\(\\(msg\\(ctxt\\|id\\(_plural\\)?\\|str\\(\\[[0-9]\\]\\)?\\)\\) \\)?\"\\|\"$"
-     . font-lock-keyword-face)
-    ("\\\\.\\|%[*$-.0-9hjltuzL]*[a-zA-Z]" . font-lock-variable-name-face)
+     (0 'font-lock-keyword-face))
+    ("\\\\.\\|%[*$-.0-9hjltuzL]*[a-zA-Z]" (0 'font-lock-variable-name-face))
     )
   "Additional expressions to highlight in PO mode.")
 
@@ -851,87 +851,80 @@ M-S  Ignore path          M-A  Ignore PO file      *M-L  Ignore lexicon
 
 (defvar po-mode-map
   ;; Use (make-keymap) because (make-sparse-keymap) does not work on Demacs.
-  (let ((po-mode-map (make-keymap)))
-    (suppress-keymap po-mode-map)
-    (define-key po-mode-map "\C-i" 'po-unfuzzy)
-    (define-key po-mode-map "\C-j" 'po-msgid-to-msgstr)
-    (define-key po-mode-map "\C-m" 'po-edit-msgstr)
-    (define-key po-mode-map " " 'po-auto-select-entry)
-    (define-key po-mode-map "?" 'po-help)
-    (define-key po-mode-map "#" 'po-edit-comment)
-    (define-key po-mode-map "," 'po-tags-search)
-    (define-key po-mode-map "." 'po-current-entry)
-    (define-key po-mode-map "<" 'po-first-entry)
-    (define-key po-mode-map "=" 'po-statistics)
-    (define-key po-mode-map ">" 'po-last-entry)
-    (define-key po-mode-map "a" 'po-cycle-auxiliary)
-;;;;  (define-key po-mode-map "c" 'po-save-entry)
-    (define-key po-mode-map "f" 'po-next-fuzzy-entry)
-    (define-key po-mode-map "h" 'po-help)
-    (define-key po-mode-map "k" 'po-kill-msgstr)
-;;;;  (define-key po-mode-map "l" 'po-lookup-lexicons)
-    (define-key po-mode-map "m" 'po-push-location)
-    (define-key po-mode-map "n" 'po-next-entry)
-    (define-key po-mode-map "o" 'po-next-obsolete-entry)
-    (define-key po-mode-map "p" 'po-previous-entry)
-    (define-key po-mode-map "q" 'po-confirm-and-quit)
-    (define-key po-mode-map "r" 'po-pop-location)
-    (define-key po-mode-map "s" 'po-cycle-source-reference)
-    (define-key po-mode-map "t" 'po-next-translated-entry)
-    (define-key po-mode-map "u" 'po-next-untranslated-entry)
-    (define-key po-mode-map "v" 'po-mode-version)
-    (define-key po-mode-map "w" 'po-kill-ring-save-msgstr)
-    (define-key po-mode-map "x" 'po-exchange-location)
-    (define-key po-mode-map "y" 'po-yank-msgstr)
-    (define-key po-mode-map "A" 'po-consider-as-auxiliary)
-    (define-key po-mode-map "E" 'po-edit-out-full)
-    (define-key po-mode-map "F" 'po-previous-fuzzy-entry)
-    (define-key po-mode-map "K" 'po-kill-comment)
-;;;;  (define-key po-mode-map "L" 'po-consider-lexicon-file)
-    (define-key po-mode-map "M" 'po-send-mail)
-    (define-key po-mode-map "O" 'po-previous-obsolete-entry)
-    (define-key po-mode-map "T" 'po-previous-translated-entry)
-    (define-key po-mode-map "U" 'po-previous-untranslated-entry)
-    (define-key po-mode-map "Q" 'po-quit)
-    (define-key po-mode-map "S" 'po-consider-source-path)
-    (define-key po-mode-map "V" 'po-validate)
-    (define-key po-mode-map "W" 'po-kill-ring-save-comment)
-    (define-key po-mode-map "Y" 'po-yank-comment)
-    (define-key po-mode-map "_" 'po-undo)
-    (define-key po-mode-map "\C-_" 'po-undo)
-    (define-key po-mode-map "\C-xu" 'po-undo)
-    (define-key po-mode-map "0" 'po-other-window)
-    (define-key po-mode-map "\177" 'po-fade-out-entry)
-    (define-key po-mode-map "\C-c\C-a" 'po-select-auxiliary)
-    (define-key po-mode-map "\C-c\C-e" 'po-edit-msgstr-and-ediff)
-    (define-key po-mode-map [?\C-c?\C-#] 'po-edit-comment-and-ediff)
-    (define-key po-mode-map "\C-c\C-C" 'po-edit-comment-and-ediff)
-    (define-key po-mode-map "\M-," 'po-mark-translatable)
-    (define-key po-mode-map "\M-." 'po-select-mark-and-mark)
-;;;;  (define-key po-mode-map "\M-c" 'po-select-and-save-entry)
-;;;;  (define-key po-mode-map "\M-l" 'po-edit-lexicon-entry)
-    (define-key po-mode-map "\M-s" 'po-select-source-reference)
-    (define-key po-mode-map "\M-A" 'po-ignore-as-auxiliary)
-;;;;  (define-key po-mode-map "\M-L" 'po-ignore-lexicon-file)
-    (define-key po-mode-map "\M-S" 'po-ignore-source-path)
-    po-mode-map)
+  (let ((map (make-keymap)))
+    (suppress-keymap map)
+    (define-key map "\C-i" #'po-unfuzzy)
+    (define-key map "\C-j" #'po-msgid-to-msgstr)
+    (define-key map "\C-m" #'po-edit-msgstr)
+    (define-key map " " #'po-auto-select-entry)
+    (define-key map "?" #'po-help)
+    (define-key map "#" #'po-edit-comment)
+    (define-key map "," #'po-tags-search)
+    (define-key map "." #'po-current-entry)
+    (define-key map "<" #'po-first-entry)
+    (define-key map "=" #'po-statistics)
+    (define-key map ">" #'po-last-entry)
+    (define-key map "a" #'po-cycle-auxiliary)
+    ;; (define-key map "c" #'po-save-entry)
+    (define-key map "f" #'po-next-fuzzy-entry)
+    (define-key map "h" #'po-help)
+    (define-key map "k" #'po-kill-msgstr)
+    ;; (define-key map "l" #'po-lookup-lexicons)
+    (define-key map "m" #'po-push-location)
+    (define-key map "n" #'po-next-entry)
+    (define-key map "o" #'po-next-obsolete-entry)
+    (define-key map "p" #'po-previous-entry)
+    (define-key map "q" #'po-confirm-and-quit)
+    (define-key map "r" #'po-pop-location)
+    (define-key map "s" #'po-cycle-source-reference)
+    (define-key map "t" #'po-next-translated-entry)
+    (define-key map "u" #'po-next-untranslated-entry)
+    (define-key map "v" #'po-mode-version)
+    (define-key map "w" #'po-kill-ring-save-msgstr)
+    (define-key map "x" #'po-exchange-location)
+    (define-key map "y" #'po-yank-msgstr)
+    (define-key map "A" #'po-consider-as-auxiliary)
+    (define-key map "E" #'po-edit-out-full)
+    (define-key map "F" #'po-previous-fuzzy-entry)
+    (define-key map "K" #'po-kill-comment)
+    ;; (define-key map "L" #'po-consider-lexicon-file)
+    (define-key map "M" #'po-send-mail)
+    (define-key map "O" #'po-previous-obsolete-entry)
+    (define-key map "T" #'po-previous-translated-entry)
+    (define-key map "U" #'po-previous-untranslated-entry)
+    (define-key map "Q" #'po-quit)
+    (define-key map "S" #'po-consider-source-path)
+    (define-key map "V" #'po-validate)
+    (define-key map "W" #'po-kill-ring-save-comment)
+    (define-key map "Y" #'po-yank-comment)
+    (define-key map "_" #'po-undo)
+    (define-key map "\C-_" #'po-undo)
+    (define-key map "\C-xu" #'po-undo)
+    (define-key map "0" #'po-other-window)
+    (define-key map "\177" #'po-fade-out-entry)
+    (define-key map "\C-c\C-a" #'po-select-auxiliary)
+    (define-key map "\C-c\C-e" #'po-edit-msgstr-and-ediff)
+    (define-key map [?\C-c?\C-#] #'po-edit-comment-and-ediff)
+    (define-key map "\C-c\C-C" #'po-edit-comment-and-ediff)
+    (define-key map "\M-," #'po-mark-translatable)
+    (define-key map "\M-." #'po-select-mark-and-mark)
+    ;; (define-key map "\M-c" #'po-select-and-save-entry)
+    ;; (define-key map "\M-l" #'po-edit-lexicon-entry)
+    (define-key map "\M-s" #'po-select-source-reference)
+    (define-key map "\M-A" #'po-ignore-as-auxiliary)
+    ;; (define-key map "\M-L" #'po-ignore-lexicon-file)
+    (define-key map "\M-S" #'po-ignore-source-path)
+    map)
   "Keymap for PO mode.")
 
+(easy-menu-define po-mode-menu po-mode-map "" po-mode-menu-layout)
+
 ;;;###autoload
-(defun po-mode ()
+(define-derived-mode po-mode nil "PO"
   "Major mode for translators when they edit PO files.
 
-Special commands:
-\\{po-mode-map}
-Turning on PO mode calls the value of the variable `po-mode-hook',
-if that value is non-nil.  Behaviour may be adjusted through some variables,
+Behaviour may be adjusted through some variables,
 all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'."
-  (interactive)
-  (kill-all-local-variables)
-  (setq major-mode 'po-mode
-        mode-name "PO")
-  (use-local-map po-mode-map)
-  (easy-menu-define po-mode-menu po-mode-map "" po-mode-menu-layout)
   (set (make-local-variable 'font-lock-defaults) '(po-font-lock-keywords t))
 
   (set (make-local-variable 'po-read-only) buffer-read-only)
@@ -972,30 +965,33 @@ all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'."
   (set (make-local-variable 'po-string-end) nil)
   (set (make-local-variable 'po-marking-overlay) (po-create-overlay))
 
-  (add-hook 'write-contents-functions 'po-replace-revision-date)
+  (add-hook 'write-contents-functions #'po-replace-revision-date nil t)
 
-  (run-mode-hooks 'po-mode-hook)
   (message (_"You may type 'h' or '?' for a short PO mode reminder.")))
+
+(defvar po-subedit-mode-map
+  ;; Use (make-keymap) because (make-sparse-keymap) does not work on Demacs.
+  (let ((map (make-keymap)))
+    (define-key map "\C-c\C-a" #'po-subedit-cycle-auxiliary)
+    (define-key map "\C-c\C-c" #'po-subedit-exit)
+    (define-key map "\C-c\C-e" #'po-subedit-ediff)
+    (define-key map "\C-c\C-k" #'po-subedit-abort)
+    map)
+  "Keymap while editing a PO mode entry (or the full PO file).")
+
+(easy-menu-define po-subedit-mode-menu po-subedit-mode-map ""
+   po-subedit-mode-menu-layout)
 
 (define-derived-mode po-subedit-mode text-mode
   ; The mode name is taken from the menu string in po-subedit-mode-menu-layout.
   "PO-Edit"
   "PO subedit mode."
-  :group 'po
-  (easy-menu-define po-subedit-mode-menu po-subedit-mode-map ""
-    po-subedit-mode-menu-layout))
-
-(defvar po-subedit-mode-map
-  ;; Use (make-keymap) because (make-sparse-keymap) does not work on Demacs.
-  (let ((po-subedit-mode-map (make-keymap)))
-    (define-key po-subedit-mode-map "\C-c\C-a" 'po-subedit-cycle-auxiliary)
-    (define-key po-subedit-mode-map "\C-c\C-c" 'po-subedit-exit)
-    (define-key po-subedit-mode-map "\C-c\C-e" 'po-subedit-ediff)
-    (define-key po-subedit-mode-map "\C-c\C-k" 'po-subedit-abort)
-    po-subedit-mode-map)
-  "Keymap while editing a PO mode entry (or the full PO file).")
+  )
 
 ;;; Window management.
+
+;; FIXME: Instead of this po-mode-flag business added to the mode-line
+;; why not (setq mode-name '("PO[" po-mode-line-string "]"))?
 
 (make-variable-buffer-local 'po-mode-flag)
 
@@ -1958,7 +1954,7 @@ comments) from the current entry, if the user gives the permission."
                              (goto-char (car (car previous-regions)))
                              (prog1 (y-or-n-p (_"Delete previous msgid comments? "))
                                     (message "")))
-                         (mapc 'po-dehighlight overlays)))))
+                         (mapc #'po-dehighlight overlays)))))
             (let ((buffer-read-only po-read-only))
               (dolist (region previous-regions)
                 (delete-region (car region) (cdr region))))))))
@@ -2049,7 +2045,7 @@ For more info cf. `po-subedit-ediff'."
   (pop-to-buffer oldbuf)
   (delete-region (point-min) end)
   (insert-buffer-substring b2)
-  (mapc 'kill-buffer `(,b1 ,b2))
+  (mapc #'kill-buffer `(,b1 ,b2))
   (display-buffer entry-buffer t))
 
 (defun po-subedit-ediff ()
@@ -2185,7 +2181,7 @@ Uses `po-subedit-mode', which runs `po-subedit-mode-hook'."
           (po-subedit-mode)
           (set (make-local-variable 'po-subedit-back-pointer) slot)
           (set (make-local-variable 'indent-line-function)
-               'indent-relative)
+               #'indent-relative)
           (setq buffer-file-coding-system edit-coding)
           (erase-buffer)
           (insert string "<")
@@ -2674,6 +2670,8 @@ keyword for subsequent commands, also added to possible completions."
 (defun po-preset-string-functions ()
   "Preset FIND-STRING-FUNCTION and MARK-STRING-FUNCTION according to mode.
 These variables are locally set in source buffer only when not already bound."
+  ;; FIXME: Make it possible for major modes to support this without
+  ;; changing this file.
   (let ((pair (cond ((equal major-mode 'awk-mode)
                      '(po-find-awk-string . po-mark-awk-string))
                     ((member major-mode '(c-mode c++-mode))
@@ -3081,7 +3079,7 @@ Leave point after marked string."
      (message (_"Type any character to continue"))
      (read-event))))
 
-(defun po-undo ()
+(defun po-undo () ;; FIXME: Make it obsolete!
   "Undo the last change to the PO file."
   (interactive)
   (let ((buffer-read-only po-read-only))
