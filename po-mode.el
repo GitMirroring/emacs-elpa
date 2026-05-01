@@ -500,9 +500,6 @@ The current buffer should be in PO mode, when this function is called."
 ;; byte compiler warnings.  It also introduces some documentation for
 ;; each of these variables, all meant to be local to PO mode buffers.
 
-(defvar-local po-mode-flag nil
-  "Flag telling that `po-mode-line-string' should be displayed.")
-
 ;; PO buffers are kept read-only to prevent random modifications.  READ-ONLY
 ;; holds the value of the read-only flag before PO mode was entered.
 (defvar po-read-only)
@@ -928,7 +925,7 @@ M-S  Ignore path          M-A  Ignore PO file      *M-L  Ignore lexicon
 (easy-menu-define po-mode-menu po-mode-map "" po-mode-menu-layout)
 
 ;;;###autoload
-(define-derived-mode po-mode nil "PO"
+(define-derived-mode po-mode nil '("PO[" po-mode-line-string "]")
   "Major mode for translators when they edit PO files.
 
 Behaviour may be adjusted through some variables,
@@ -937,8 +934,6 @@ all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'."
 
   (set (make-local-variable 'po-read-only) buffer-read-only)
   (setq buffer-read-only t)
-
-  (setq po-mode-flag t)
 
   (po-check-file-header)
   (po-compute-counters nil)
@@ -983,21 +978,6 @@ all reachable through `M-x customize', in group `Emacs.Editing.I18n.Po'."
   (set (make-local-variable 'indent-line-function) #'indent-relative))
 
 ;;; Window management.
-
-;; FIXME: Instead of this po-mode-flag business added to the mode-line
-;; why not (setq mode-name '("PO[" po-mode-line-string "]"))?
-
-(defvar po-mode-line-entry '(po-mode-flag ("  " po-mode-line-string))
-  "Mode line format entry displaying MODE-LINE-STRING.")
-
-;; Insert MODE-LINE-ENTRY in mode line, but on first load only.
-(or (member po-mode-line-entry mode-line-format)
-    ;; mode-line-format usually contains global-mode-string, but some
-    ;; people customize this variable. As a last resort, append at the end.
-    (let ((prev-entry (or (member 'global-mode-string mode-line-format)
-                          (member "   " mode-line-format)
-                          (last mode-line-format))))
-      (setcdr prev-entry (cons po-mode-line-entry (cdr prev-entry)))))
 
 (defun po-update-mode-line-string ()
   "Compute a new statistics string to display in mode line."
