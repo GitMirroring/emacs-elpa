@@ -81,6 +81,12 @@
 (defsubst _ (string) (translate-string string))
 (defsubst N_ (string) string)
 
+(eval-and-compile
+  (unless (fboundp 'with-suppressed-warnings) ;; Emacs<27.
+    (defmacro with-suppressed-warnings (_warnings &rest body)
+      `(with-no-warnings ,@body)))
+  )
+
 ;;; Customisation.
 
 (defgroup po nil
@@ -2513,10 +2519,6 @@ If the command is repeated many times in a row, cycle through contexts."
 
 ;;; String marking in program sources, through TAGS table.
 
-;; Globally defined within tags.el.
-(defvar tags-loop-operate)
-(defvar tags-loop-scan)
-
 ;; Locally set in each program source buffer.
 (defvar po-find-string-function)
 (defvar po-mark-string-function)
@@ -2539,15 +2541,29 @@ With prefix argument, restart search at first file."
   (let ((po-current-po-buffer (current-buffer))
         (po-current-po-keywords po-keywords))
     (pop-to-buffer po-string-buffer)
-    ;; FIXME: Use `fileloop-initialize' when available.
-    (if (and (not restart)
-             (eq (car tags-loop-operate) 'po-tags-loop-operate))
-        ;; Continue last po-tags-search.
-        (tags-loop-continue nil)
-      ;; Start or restart po-tags-search all over.
-      (setq tags-loop-scan '(po-tags-loop-scan)
-            tags-loop-operate '(po-tags-loop-operate))
-      (tags-loop-continue t))
+    (if (fboundp 'fileloop-initialize) ;; Emacs≥27
+        (or (and (not restart)
+                 (ignore-errors (fileloop-continue) t))
+            ;; Start or restart po-tags-search all over.
+            (progn
+              (fileloop-initialize
+               (tags--all-files) ;; FIXME: Internal function!
+               #'po-tags-loop-scan
+               #'po-tags-loop-operate)
+              (fileloop-continue)))
+      (with-suppressed-warnings
+          ((obsolete tags-loop-operate tags-loop-continue tags-loop-scan))
+        ;; Globally defined within tags.el.
+        (defvar tags-loop-operate)
+        (defvar tags-loop-scan)
+        (if (and (not restart)
+                 (eq (car tags-loop-operate) #'po-tags-loop-operate))
+            ;; Continue last po-tags-search.
+            (tags-loop-continue nil)
+          ;; Start or restart po-tags-search all over.
+          (setq tags-loop-scan '(po-tags-loop-scan)
+                tags-loop-operate '(po-tags-loop-operate))
+          (tags-loop-continue t))))
     (select-window (get-buffer-window po-current-po-buffer)))
   (if po-string-contents
       (let ((window (selected-window))
