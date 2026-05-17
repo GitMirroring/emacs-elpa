@@ -13,7 +13,6 @@
        "imagemagick"
        "lzip"
        "make"
-       "markdown"
+       "cmark"
        "tar"
        "texinfo"))
-
