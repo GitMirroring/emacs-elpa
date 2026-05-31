@@ -55,12 +55,17 @@
 (defvar elpaa--devel-subdir "archive-devel/"
   "Subdirectory where the ELPA bleeding edge files (tarballs, ...) will be placed.")
 
-(defvar elpaa--wsl-stats-file "wsl-stats.eld"
+(defvar elpaa--wsl-stats-file "~/wsl-stats.eld"
   "File where web-server access stats are kept.")
 
 (defvar elpaa--name "NonGNU")
 (defvar elpaa--gitrepo "emacs/nongnu.git")
-(defvar elpaa--url "https://elpa.gnu.org/nongnu/")
+(defvar elpaa--release-url "https://elpa.gnu.org/nongnu/")
+(defvar elpaa--url elpaa--release-url)
+(defvar elpaa--sister-archive-url "https://elpa.nongnu.org/")
+(defvar elpaa--sister-archive-release-path "release/")
+(defvar elpaa--sister-archive-name "GNU")
+
 (defvar elpaa--devel-url "https://elpa.gnu.org/nongnu-devel/")
 (defvar elpaa--css-url "https://www.gnu.org/software/emacs/manual.css")
 
@@ -187,12 +192,12 @@ Delete backup files also."
          (ac (if (file-exists-p filename)
                  (elpaa--form-from-file-contents filename)
                '(1))))
-    (elpaa--message "current AC: %S" ac)
+    ;; (elpaa--message "current AC: %S" ac)
     (setf (alist-get (car pkg-desc) (cdr ac)) (cdr pkg-desc))
     (setf (cdr ac) (sort (cdr ac)
                          (lambda (x y)
                            (string-lessp (symbol-name (car x)) (symbol-name (car y))))))
-    (elpaa--message "new AC: %S" ac)
+    ;; (elpaa--message "new AC: %S" ac)
     (elpaa--write-archive-contents ac dir)))
 
 (defun elpaa--get-specs (&optional no-follow-links)
@@ -400,14 +405,19 @@ returns.  Return the selected revision."
 (defun elpaa--call-with-temp-files (dir f)
   (let ((elpaa--temp-files nil))
     (unwind-protect
-        (progn
+        (let ((temporary-file-directory (make-temp-file "elpa" t)))
           (elpaa--clean dir)
+          (elpaa--temp-file temporary-file-directory)
           (funcall f))
       (elpaa--message "Deleting temp files: %S" elpaa--temp-files)
       (dolist (f elpaa--temp-files)
-        (if (stringp f)
-            (delete-file f)
-          (funcall f))))))
+        (cond
+         ((stringp f)
+          (if (file-directory-p f)
+              (delete-directory f 'recursive)
+            (delete-file f)))
+         ((functionp f)
+          (funcall f)))))))
 
 (defun elpaa--clean (dir)
   "Try and bring DIR to a pristine state without losing too much info."
@@ -1380,7 +1390,11 @@ PROGRAM, DESTINATION, ARGS is like in `elpaa--call'."
       (apply #'elpaa--call destination args)
     (elpaa--message "call-sandboxed %S" args)
     (let ((dd (expand-file-name default-directory))) ;No `~' allowed!
-      (setq args (nconc `("--bind" ,dd ,dd) args)))
+      (setq args (nconc `("--bind"
+                          ,temporary-file-directory
+                          ,temporary-file-directory)
+                        `("--bind" ,dd ,dd)
+                        args)))
     ;; Add read-only dirs in reverse order.
     (dolist (b (append elpaa--sandbox-ro-binds
                        elpaa--sandbox-extra-ro-dirs))
@@ -1644,7 +1658,7 @@ readme file has an unconventional name"
 <body>
 <header>
 <h1>
-<img src=\"../images/logo.svg\" />
+<img src=\"../images/logo.svg\" alt=\"ELPA Logo\" width=\"60\" height=\"64\" />
 %s
 </h1>
 
@@ -1927,7 +1941,7 @@ arbitrary code."
                     '("cgit/%s/?h=%s"
                       "gitweb/?p=%s;a=shortlog;h=refs/heads/%s")))))
     (insert (format
-             (concat (format "<dt>Browse %srepository</dt> <dd>"
+             (concat (format "<dt>%sRepository</dt> <dd>"
                              (if url "ELPA's " ""))
                      "<a href=%S>%s</a> or <a href=%S>%s</a></dd>\n")
              (concat git-sv (nth 0 urls))
@@ -1991,9 +2005,13 @@ in case of cyclic dependencies."
     (insert "<dt>All Dependencies</dt><dd>"
             (mapconcat
              (lambda (pkg-name)
-               (format "<a href=\"%s.html\">%s</a> (<a href=\"%s.tar\">.tar</a>)"
-                       pkg-name pkg-name pkg-name))
-             reqs ", ")
+               (let ((pref (if (file-exists-p (format "%s.tar" pkg-name))
+                               ""
+                             (concat elpaa--sister-archive-url "/"
+                                     elpaa--sister-archive-release-path))))
+                 (format "<a href=\"%s.html\">%s</a> (<a href=\"%s.tar\">.tar</a>)"
+                         pkg-name pkg-name pkg-name)))
+             reqs "</dd></dd>")
             "</dd>\n")))
 
 (defun elpaa--html-make-pkg (pkg pkg-spec files srcdir plain-readme)
@@ -2010,20 +2028,21 @@ in case of cyclic dependencies."
       (insert (elpaa--html-header
                (format "%s ELPA: %s" elpaa--name name)
                (format "%s ELPA: %s" elpaa--name name)
-               (format "<link href=\"%s.xml\" type=\"application/atom+xml\" rel=\"alternate\" />" name)
+               (format "<link href=\"%s.xml\" type=\"application/atom+xml\" rel=\"alternate\" />\n" name)
                (concat
                 ;; Link to other ELPA
-                "<li>"
-                (if (string-prefix-p "GNU" elpaa--name)
-                    "<a href=\"https://elpa.nongnu.org/\">NonGNU ELPA</a>"
-                  "<a href=\"https://elpa.gnu.org/\">GNU ELPA</a>")
-                "</li>"
+                "<li class=\"other\"><a href=\""
+                elpaa--sister-archive-url "" "\">" elpaa--sister-archive-name
+                " ELPA</a></li>\n"
                 ;; Link to devel/regular
-                "<li>\n<a href=\"../"
-                (format (if (string-suffix-p "-devel" elpaa--name)
-                            "packages/%s.html\">%s(-release)"
-                          "devel/%s.html\">%s-devel")
-                        name (if (string-prefix-p "GNU" elpaa--name) "GNU" "NonGNU"))
+                "<li class=\"other\">\n<a href=\"../"
+                (format
+                 (if (string-suffix-p "-devel" elpaa--name)
+                     (concat (file-name-base (directory-file-name elpaa--release-url))
+                             "/%s.html\">%s(-release)")
+                   (concat (file-name-base (directory-file-name elpaa--devel-url))
+                           "/%s.html\">%s-devel"))
+                 name (string-remove-suffix "-devel" elpaa--name))
                 " ELPA</a>\n</li>")))
       (insert (format "<h2 class=\"package\">%s" name))
       (insert " <a class=\"badge\" href=\"" name ".xml\"><img src=\"../images/rss.svg\" alt=\"Atom Feed\"></a>")

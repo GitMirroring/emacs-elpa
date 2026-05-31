@@ -56,13 +56,10 @@ archiv%/table.html: archiv%/archive-contents
 	$(EMACS) -l admin/elpa-admin.el \
 	         -f elpaa-batch-html-make-index $< $*
 
-html/index.html: archive/table.html html/_index.html
-	cp html/_index.html $@
-	sed --file=html/index.sed --in-place $@ < $<
-
-html/devel.html: archive-devel/table.html html/_devel.html
-	cp html/_devel.html $@
-	sed --file=html/index.sed --in-place $@ < $<
+archive/index.html: archive/table.html html/_index.html
+archive-devel/index.html: archive-devel/table.html html/_devel.html
+archive/index.html archive-devel/index.html:
+	sed -e "/^<tr>/d; /^<tbody>/r $<" $(word 2,$^) > $@
 
 ########## Rules for in-place installation ####################################
 pkgs := $(wildcard packages/*)
